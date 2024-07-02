@@ -89,7 +89,8 @@ const Body = () => {
 
       // Generate PDF
       const doc = new jsPDF();
-      doc.text(generatedContent, 10, 10);
+      const lines = doc.splitTextToSize(generatedContent, 180);
+      doc.text(lines, 10, 10);
       const pdfData = doc.output('datauristring');
 
       setResponse(pdfData);
@@ -159,6 +160,7 @@ const Body = () => {
                         <Textarea
                           placeholder="Example question: Explain the process of photosynthesis. Include the chemical equation and describe the roles of chlorophyll, light, water, and carbon dioxide in the process."
                           className="resize-none"
+                          style={{ height: '200px' }}
                           {...field}
                         />
                       </FormControl>
