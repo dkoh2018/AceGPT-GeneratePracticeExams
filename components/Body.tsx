@@ -20,7 +20,6 @@ import { AlertCircle } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import LoadingDots from '@/components/ui/loadingdots';
 import { toast, Toaster } from 'react-hot-toast';
-import { jsPDF } from 'jspdf';
 
 const generateFormSchema = z.object({
   apiKey: z.string().min(3),
@@ -87,13 +86,7 @@ const Body = () => {
       const responseData = await response.json();
       const generatedContent = responseData.generatedContent;
 
-      // Generate PDF
-      const doc = new jsPDF();
-      const lines = doc.splitTextToSize(generatedContent, 180);
-      doc.text(lines, 10, 10);
-      const pdfData = doc.output('datauristring');
-
-      setResponse(pdfData);
+      setResponse(generatedContent);
       setIsLoading(false);
     } catch (error) {
       if (error instanceof Error) {
@@ -253,8 +246,11 @@ const Body = () => {
                 Your Practice Exam
               </h1>
               <div className="flex flex-col justify-center relative h-auto items-center">
-                <div className="relative flex flex-col justify-center items-center gap-y-2 w-[510px] border border-gray-300 rounded shadow group p-2 mx-auto bg-gray-400 aspect-square max-w-full">
-                  <p>TEST GENERATED</p>
+                <div
+                  className="relative flex flex-col justify-start items-start gap-y-2 w-full border border-gray-300 rounded shadow group p-2 mx-auto bg-gray-100 max-w-full overflow-y-auto"
+                  style={{ height: '690px' }}
+                >
+                  <pre className="whitespace-pre-wrap">{response}</pre>
                 </div>
               </div>
               <div className="flex justify-center gap-5 mt-4">
