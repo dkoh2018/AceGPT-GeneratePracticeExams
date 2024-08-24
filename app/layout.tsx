@@ -44,6 +44,12 @@ export default function RootLayout({
         <link rel="icon" href="/next.svg" type="image/svg+xml" />{' '}
         {/* Update the icon link */}
         <PlausibleProvider domain="acegpt.io" />
+        <script
+          type="text/javascript"
+          id="MathJax-script"
+          async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+        ></script>
       </head>
       <body className={inter.className}>
         <Navbar />

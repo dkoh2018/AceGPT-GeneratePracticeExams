@@ -20,6 +20,8 @@ import { AlertCircle } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import LoadingDots from '@/components/ui/loadingdots';
 import { toast, Toaster } from 'react-hot-toast';
+import DownloadButton from '@/components/ui/downloadbutton';
+import { BlockMath } from 'react-katex';
 
 const generateFormSchema = z.object({
   apiKey: z.string().min(3),
@@ -33,9 +35,7 @@ type GenerateFormValues = z.infer<typeof generateFormSchema>;
 
 const models = [
   { value: 'gpt-4o', label: 'gpt-4o' },
-  { value: 'gpt-4-turbo', label: 'gpt-4-turbo' },
-  { value: 'gpt-4', label: 'gpt-4' },
-  { value: 'gpt-3.5-turbo', label: 'gpt-3.5-turbo' },
+  { value: 'gpt-4o-mini', label: 'gpt-4o-mini' },
 ];
 
 const marks = Array.from({ length: 10 }, (_, i) => ({
@@ -245,25 +245,14 @@ const Body = () => {
               <h1 className="text-3xl font-bold sm:mb-5 mb-5 mt-5 sm:mt-0 sm:text-center text-left">
                 Your Practice Exam
               </h1>
-              <div className="flex flex-col justify-center relative h-auto items-center">
-                <div
-                  className="relative flex flex-col justify-start items-start gap-y-2 w-full border border-gray-300 rounded shadow group p-2 mx-auto bg-gray-100 max-w-full overflow-y-auto"
-                  style={{ height: '690px' }}
-                >
-                  <pre className="whitespace-pre-wrap">{response}</pre>
-                </div>
+              <div
+                className="relative flex flex-col justify-start items-start gap-y-2 w-full border border-gray-300 rounded shadow group p-2 mx-auto bg-gray-100 max-w-full overflow-y-auto"
+                style={{ height: 'auto', maxHeight: '500px' }}
+              >
+                <pre className="whitespace-pre-wrap">{response}</pre>
               </div>
               <div className="flex justify-center gap-5 mt-4">
-                <Button
-                  onClick={() => {
-                    const link = document.createElement('a');
-                    link.href = response;
-                    link.download = 'practice_exam.pdf';
-                    link.click();
-                  }}
-                >
-                  Download
-                </Button>
+                <DownloadButton response={response} />
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -278,6 +267,13 @@ const Body = () => {
           )}
         </div>
       </div>
+      {response && (
+        <div className="mt-10 w-full max-w-6xl mx-auto border-t border-gray-300 pt-4">
+          <pre className="whitespace-pre-wrap">
+            <BlockMath math={response} />
+          </pre>
+        </div>
+      )}
       <Toaster />
     </div>
   );
