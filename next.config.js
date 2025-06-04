@@ -6,6 +6,11 @@ const nextConfig = {
       'g4yqcv8qdhf169fk.public.blob.vercel-storage.com',
     ],
   },
+  transpilePackages: ['react-katex'],
+  webpack: (config) => {
+    config.externals = [...config.externals, 'canvas', 'jsdom'];
+    return config;
+  },
 };
 
 module.exports = nextConfig;

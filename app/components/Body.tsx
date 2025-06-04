@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useEffect } from 'react'; // Add this import
 import * as z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -10,32 +11,50 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+} from '@/app/components/ui/form';
+import { Textarea } from '@/app/components/ui/textarea';
+import { Input } from '@/app/components/ui/input';
+import { Button } from '@/app/components/ui/button';
 import { Slider, Box, MenuItem, Select } from '@mui/material';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import { AlertCircle } from 'lucide-react';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import LoadingDots from '@/components/ui/loadingdots';
+import { Alert, AlertTitle, AlertDescription } from '@/app/components/ui/alert';
+import LoadingDots from '@/app/components/ui/loadingdots';
 import { toast, Toaster } from 'react-hot-toast';
-import DownloadButton from '@/components/ui/downloadbutton';
-import { BlockMath } from 'react-katex';
+import jsPDF from 'jspdf';
+// import html2canvas from 'html2canvas'; // No longer directly used, jsPDF.html() uses it internally
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
+import hljs from 'highlight.js';
+import 'highlight.js/styles/default.css'; // Or your preferred theme
 
 const generateFormSchema = z.object({
   apiKey: z.string().min(3),
   model: z.string().min(3),
   prompt: z.string().min(3).max(4000),
-  file: z.any().optional(),
   difficulty: z.number().min(1).max(10).default(5),
 });
 
 type GenerateFormValues = z.infer<typeof generateFormSchema>;
 
 const models = [
-  { value: 'gpt-4o', label: 'gpt-4o' },
-  { value: 'gpt-4o-mini', label: 'gpt-4o-mini' },
+  // Reasoning Models (Reordered)
+  { value: 'o3', label: 'o3 (Advanced reasoning)' },
+  { value: 'o3-mini', label: 'o3 Mini (Smaller, faster o3)' },
+  { value: 'o4-mini-high', label: 'o4 Mini High (Higher accuracy, faster o4-mini)' },
+  { value: 'o4-mini', label: 'o4 Mini (Successor to o3-mini)' },
+
+  // GPT-4.1 Series (Reordered)
+  { value: 'gpt-4-1106-preview', label: 'GPT-4.1 (128k, Text-only)' },
+  
+  // GPT-4o Series (Reordered)
+  { value: 'gpt-4o', label: 'GPT-4o (Multimodal, 128k context)' },
+
+  // GPT-4.1 Mini (Reordered)
+  { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini (Smaller, cost-effective)' },
+
+  // GPT-4o Mini (Reordered)
+  { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Smaller, cost-efficient)' },
 ];
 
 const marks = Array.from({ length: 10 }, (_, i) => ({
@@ -47,6 +66,7 @@ const Body = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [response, setResponse] = useState<string | null>(null);
+  const examPreviewRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<GenerateFormValues>({
     resolver: zodResolver(generateFormSchema),
@@ -55,7 +75,6 @@ const Body = () => {
       apiKey: '',
       model: 'gpt-4o',
       prompt: '',
-      file: undefined,
       difficulty: 5,
     },
   });
@@ -70,9 +89,6 @@ const Body = () => {
       formData.append('model', values.model);
       formData.append('prompt', values.prompt);
       formData.append('difficulty', values.difficulty.toString());
-      if (values.file) {
-        formData.append('file', values.file);
-      }
 
       const response = await fetch('/api/save-form-data', {
         method: 'POST',
@@ -95,6 +111,76 @@ const Body = () => {
       setIsLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (response && examPreviewRef.current) {
+      // Render KaTeX
+      const mathElements = examPreviewRef.current.querySelectorAll('.mathjax-latex');
+      mathElements.forEach((element) => {
+        const el = element as HTMLElement;
+        try {
+          katex.render(el.innerText || '', el, {
+            throwOnError: false,
+            displayMode: el.tagName === 'DIV',
+          });
+        } catch (e) {
+          console.error('KaTeX rendering error:', e, 'on element:', el.innerText);
+          el.innerHTML = `<span style="color: red;">KaTeX Error: ${e instanceof Error ? e.message : String(e)}</span>`;
+        }
+      });
+
+      // Apply syntax highlighting
+      const codeElements = examPreviewRef.current.querySelectorAll('pre code');
+      codeElements.forEach((element) => {
+        hljs.highlightElement(element as HTMLElement);
+      });
+    }
+  }, [response]);
+
+  const handleGeneratePdf = async () => {
+    if (!examPreviewRef.current) {
+      toast.error('Exam content not available for PDF generation.');
+      return;
+    }
+
+    toast.loading('Generating PDF...', { id: 'pdf-toast' });
+
+    try {
+      const pdf = new jsPDF({
+        orientation: 'p', // portrait
+        unit: 'pt', // points
+        format: 'a4', // A4 format
+      });
+
+      // It's important that the element passed to pdf.html() is visible and fully rendered.
+      // Ensure KaTeX (or other dynamic rendering) has completed.
+      // The quality of CSS support can vary. Inline styles and simple CSS are generally better.
+      await pdf.html(examPreviewRef.current, {
+        callback: function (doc) {
+          doc.save('practice_exam.pdf');
+          toast.success('PDF downloaded!', { id: 'pdf-toast' });
+        },
+        x: 15, // margin
+        y: 15, // margin
+        width: 565, // A4 width in points (595) - 2*margin (15*2=30)
+        windowWidth: examPreviewRef.current.scrollWidth, // Use the scrollWidth of the content
+        html2canvas: {
+          scale: 0.7, // Adjust scale to fit content; may need tweaking. Lower scale can help fit more.
+          logging: true,
+          useCORS: true,
+          // It's often better to ensure your CSS is robust and doesn't rely on complex selectors
+          // that html2canvas might struggle with.
+        },
+        // autoPaging: 'slice' is one option, 'text' is another. 'slice' can be more robust for layout.
+        autoPaging: 'slice',
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error(`Failed to generate PDF: ${error instanceof Error ? error.message : String(error)}`, { id: 'pdf-toast' });
+      // Ensure loading toast is dismissed on error if not handled by success
+      toast.dismiss('pdf-toast');
+    }
+  };
 
   return (
     <div className="flex justify-center items-center flex-col w-full lg:p-0 p-4 sm:mb-28 mb-0">
@@ -157,25 +243,6 @@ const Body = () => {
                           {...field}
                         />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="file"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Upload File</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="file"
-                          onChange={(e) => field.onChange(e.target.files?.[0])}
-                        />
-                      </FormControl>
-                      <Box mt={1} color="text.secondary">
-                        Upload a file to generate consistent exams.
-                      </Box>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -246,34 +313,35 @@ const Body = () => {
                 Your Practice Exam
               </h1>
               <div
-                className="relative flex flex-col justify-start items-start gap-y-2 w-full border border-gray-300 rounded shadow group p-2 mx-auto bg-gray-100 max-w-full overflow-y-auto"
-                style={{ height: 'auto', maxHeight: '500px' }}
-              >
-                <pre className="whitespace-pre-wrap">{response}</pre>
-              </div>
+                ref={examPreviewRef}
+                className="exam-preview-area relative flex flex-col justify-start items-start gap-y-2 w-full border border-gray-300 rounded shadow group p-4 mx-auto bg-white max-w-full overflow-y-auto"
+                style={{ height: 'auto', maxHeight: '600px' }} // Increased height
+                dangerouslySetInnerHTML={{ __html: response }}
+              />
               <div className="flex justify-center gap-5 mt-4">
-                <DownloadButton response={response} />
+                <Button
+                  onClick={handleGeneratePdf}
+                  disabled={isLoading || !response}
+                >
+                  Download PDF
+                </Button>
                 <Button
                   variant="outline"
                   onClick={() => {
-                    navigator.clipboard.writeText(response);
-                    toast.success('Link copied to clipboard');
+                    if (response) {
+                      navigator.clipboard.writeText(response);
+                      toast.success('HTML content copied to clipboard');
+                    }
                   }}
+                  disabled={!response}
                 >
-                  ✂️ Share
+                  ✂️ Copy HTML
                 </Button>
               </div>
             </>
           )}
         </div>
       </div>
-      {response && (
-        <div className="mt-10 w-full max-w-6xl mx-auto border-t border-gray-300 pt-4">
-          <pre className="whitespace-pre-wrap">
-            <BlockMath math={response} />
-          </pre>
-        </div>
-      )}
       <Toaster />
     </div>
   );

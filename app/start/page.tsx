@@ -1,4 +1,4 @@
-import Body from '@/components/Body';
+import Body from '@/app/components/Body';
 
 export default function GeneratePage() {
   return <Body />;

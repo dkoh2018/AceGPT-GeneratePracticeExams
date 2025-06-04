@@ -1,6 +1,6 @@
-import CTA from '@/components/CTA';
-import GradientWrapper from '@/components/GradientWrapper';
-import Hero from '@/components/Hero';
+import CTA from '@/app/components/CTA';
+import GradientWrapper from '@/app/components/GradientWrapper';
+import Hero from '@/app/components/Hero';
 
 export default function Home() {
   return (

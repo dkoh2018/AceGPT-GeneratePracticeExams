@@ -1,5 +1,5 @@
-import { Button } from '@/components/ui/button';
-import LoadingDots from '@/components/ui/loadingdots';
+import { Button } from '@/app/components/ui/button';
+import LoadingDots from '@/app/components/ui/loadingdots';
 import { useState } from 'react';
 
 const NextPage = () => {
